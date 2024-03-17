@@ -42,7 +42,18 @@ We add `n_levels` in the first year. Then, every future year we compare the capa
 """
 function get_action(x::ParkingGarageState, policy::AdaptivePolicy)
     # THIS IS THE FUNCTION YOU NEED TO REPLACE!
-    throw("You need to implement the adaptive policy yourself")
+    # if the demand exceeds the cacity build another flood
+    capacity = calculate_capacity(x)
+    demand = calculate_demand(x.year, 80.0)
+    currentlevels = x.n_levels
+
+    if x.year == 1
+        return ParkingGarageAction(1)
+    elseif demand > capacity
+        return ParkingGarageAction(1)
+    else
+        return ParkingGarageAction(0)
+    end
 end
 
 """
