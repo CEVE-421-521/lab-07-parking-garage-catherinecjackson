@@ -40,3 +40,141 @@ using Plots
 Plots.default(; margin=5Plots.mm)
 ```
 
+# Introduction
+
+@deneufville_parkinggarage:2006 introduced a case study of a parking garage in which the decision variable is the number of levels to build.  The authors discussed an emergent issue in which planned infrastructure does not meet future demands.  They discuss how some highways fill up immediately after their construction, while others remain underutilized for years.  For this reason, they argue that **it might be cost effective to stage infrastructure development**.
+
+1. This defers expenses until necessary (reducing the present value cost of the system).
+
+2. It avoids the development of unnecessary capacity.
+
+## Load packages
+
+```{julia}
+using Revise
+using ParkingGarage
+using Plots
+Plots.default(; margin=5Plots.mm)
+```
+
+## Formal problem framing
+
+We view the problem as a sequential decision problem following @deneufville_parkinggarage:2006.  As discussed, most current infrastructure relies on a pre-determined capacity (e.g. a set number of floors).  However, for the reasons discussed above, it might be more cost-effective to stage infrastructure development.  To test this theory, we will consider two cases:
+
+1. Static Case: The number of levels is fixed.
+
+2. Adaptive Case: We pay an extra 5% for up-front costs, but then retain the option to build more levels in the future.  We will use a simple rule to decide when to build more levels: if demand exceeds the current capacity, we will build one more level.
+
+Beyond determining these two cases, we also need to clarify the idea of a state, an important concept in sequential decision making.  A state is the relevant information we have (necessary to make a decision) at a given time step.  For example, in our adaptive case, it is important to know the current demand and the current number of levels.  We will use this information to decide whether to build higher.  Our states include the year, the number of levels, and the capacity.  However, with the capacity, some people might consider this a stochastic variable, but in this lab it is deterministic.
+
+We also have some uncertainty in our model: the discount rate, the time horizon, and the demand growth rate.
+The paper uses an exponential growth model for demand, but we'll use a linear one.
+
+The plot below shows the number of cars per day expected throughout the study.
+
+```{julia}
+#| code-fold: true
+let
+    sow = ParkingGarageSOW()
+    years = 1:(sow.n_years)
+    demand = [
+        ParkingGarage.calculate_demand(year, sow.demand_growth_rate) for year in years
+    ]
+    plot(
+        years,
+        demand;
+        ylabel="Demand [cars/day]",
+        xlabel="Year",
+        legend=false,
+        title="Demand Growth Rate: $(sow.demand_growth_rate) Cars/Year",
+        size=(800, 400),
+        marker=:circle,
+    )
+end
+```
+
+# Static case
+
+This function assumes that the demand is deterministic and that the number of levels is fixed.
+The decision variable is the number of levels of the garage to build.
+If we consider a single SOW, we can calculate the NPV of the profits for a given policy.
+
+```{julia}
+let
+    sow = ParkingGarageSOW(; demand_growth_rate=80.0, n_years=20, discount_rate=0.12)
+    n_levels = 2:12
+    policies = [StaticPolicy(i) for i in n_levels]
+    profits = [simulate(sow, policy) for policy in policies]
+    plot(
+        n_levels,
+        profits;
+        ylabel="NPV Profits [Million USD]",
+        xlabel="Number of levels",
+        legend=false,
+        title="$(sow.n_years) Year Horizon, $(sow.discount_rate) Discount, $(sow.demand_growth_rate) Demand Growth",
+        size=(800, 400),
+        marker=:circle,
+        xticks=n_levels,
+    )
+    hline!([0])
+end
+```
+
+## Uncertainty
+
+Figure 1 of @deneufville_parkinggarage:2006 shows how the NPV changes when uncertainty is added to the model.
+Reproduce this figure, using our model.
+Specifically:
+
+1. Generate an ensemble of SOWs. Justify how you are sampling the three parameters (`n_years`, `demand_growth_rate`, and `discount_rate`). I suggest to keep `n_years` as a constant, and perhaps to keep the discount rate constant as well.
+
+```{julia}
+# Generate an ensemble of SOWs. Justify how you are sampling the three parameters (`n_years`, `demand_growth_rate`, and `discount_rate`). I suggest to keep `n_years` as a constant, and perhaps to keep the discount rate constant as well.
+
+function draw_growth_rate()
+    grd = randn() * 10 + 80
+    return grd
+end
+
+function draw_discount_rate()
+    dr = randn() * 0.02 + 0.12
+    return dr
+end
+
+let
+    sow = ParkingGarageSOW(; demand_growth_rate=draw_growth_rate(), n_years=20, discount_rate=draw_discount_rate())
+    n_levels = 2:12
+    policies = [StaticPolicy(i) for i in n_levels]
+    profits = [simulate(sow, policy) for policy in policies]
+    plot(
+        n_levels,
+        profits;
+        ylabel="NPV Profits [Million USD]",
+        xlabel="Number of levels",
+        legend=false,
+        title="$(sow.n_years) Year Horizon, $(sow.discount_rate) Discount, $(sow.demand_growth_rate) Demand Growth",
+        size=(800, 400),
+        marker=:circle,
+        xticks=n_levels,
+    )
+    hline!([0])
+end
+
+```
+
+1. For each SOW, calculate the NPV for each policy.
+1. Calculate the average NPV for each number of levels and plot.
+
+# Adaptive case
+
+The static case sheds some light on decision making under uncertainty.
+However, the point of the @denuefville_parkinggarage:2006 paper is to illustrate the value of flexibility in decision making.
+
+To implement this, you'll need to get your hands a bit dirty with the source code.
+Specifically, you need to edit the `function get_action(x::ParkingGarageState, policy::AdaptivePolicy)` function in `ParkingGarage/src/sim.jl`.
+You'll need to use `if...else...end` statements to implement the adaptive policy.
+We'll talk about this in class!
+
+Once you've implemented this function, you can simulate the adaptive policy and compare the NPV to the static policy.
+Compare the fixed and adaptive policies for both the deterministic (single SOW) and stochastic (ensemble of SOWs) cases.
+Plot the NPV as a function of the number of levels for each case.
