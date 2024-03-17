@@ -126,11 +126,9 @@ Figure 1 of @deneufville_parkinggarage:2006 shows how the NPV changes when uncer
 Reproduce this figure, using our model.
 Specifically:
 
-1. Generate an ensemble of SOWs. Justify how you are sampling the three parameters (`n_years`, `demand_growth_rate`, and `discount_rate`). I suggest to keep `n_years` as a constant, and perhaps to keep the discount rate constant as well.
+1. Generate an ensemble of SOWs. I created two functions: draw_growth_rate and draw_discount_rate.
 
 ```{julia}
-# Generate an ensemble of SOWs. Justify how you are sampling the three parameters (`n_years`, `demand_growth_rate`, and `discount_rate`). I suggest to keep `n_years` as a constant, and perhaps to keep the discount rate constant as well.
-
 function draw_growth_rate()
     grd = randn() * 10 + 80
     return grd
@@ -142,17 +140,23 @@ function draw_discount_rate()
 end
 
 let
-    sow = ParkingGarageSOW(; demand_growth_rate=draw_growth_rate(), n_years=20, discount_rate=draw_discount_rate())
+    totalprofits = [0,0,0,0,0,0,0,0,0,0,0];
+    n_sow = 100;
     n_levels = 2:12
     policies = [StaticPolicy(i) for i in n_levels]
-    profits = [simulate(sow, policy) for policy in policies]
+    for j = 1:n_sow
+        sow = ParkingGarageSOW(; demand_growth_rate=draw_growth_rate(), n_years=20, discount_rate=draw_discount_rate())
+        profits = [simulate(sow, policy) for policy in policies]
+        totalprofits = totalprofits .+ profits
+    end
+    totalprofits = totalprofits ./ n_sow
     plot(
         n_levels,
-        profits;
+        totalprofits;
         ylabel="NPV Profits [Million USD]",
         xlabel="Number of levels",
         legend=false,
-        title="$(sow.n_years) Year Horizon, $(sow.discount_rate) Discount, $(sow.demand_growth_rate) Demand Growth",
+        title="Stochastic Static Plot",
         size=(800, 400),
         marker=:circle,
         xticks=n_levels,
@@ -161,9 +165,6 @@ let
 end
 
 ```
-
-1. For each SOW, calculate the NPV for each policy.
-1. Calculate the average NPV for each number of levels and plot.
 
 # Adaptive case
 
