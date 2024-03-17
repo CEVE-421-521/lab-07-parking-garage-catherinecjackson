@@ -126,16 +126,23 @@ Figure 1 of @deneufville_parkinggarage:2006 shows how the NPV changes when uncer
 Reproduce this figure, using our model.
 Specifically:
 
-1. Generate an ensemble of SOWs. I created two functions: draw_growth_rate and draw_discount_rate.
+1. Generate an ensemble of SOWs. I created two functions: draw_growth_rate and draw_discount_rate.  For draw_growth_rate, I took the original value provided, 80 cars per year, and created a normal distribution.  Given that I have no experience or reason to make any adjustments to this estimate, my uncertainty is then just this distribution.  I followed the same procedure for the discount rate.
+2. Run over all SOWs:  I use the for loop to run over the different SOWs and calculate the NPV for each policy.
+3. Add up the NPVs:  I use the variable totalprofits to keep track of the total and overall NPV at each level height.
 
 ```{julia}
+
+using Distributions
+
 function draw_growth_rate()
-    grd = randn() * 10 + 80
+    normaldist = Normal(80,10)
+    grd = rand(normaldist)
     return grd
 end
 
 function draw_discount_rate()
-    dr = randn() * 0.02 + 0.12
+    normaldist = Normal(0.12,0.02)
+    dr = rand(normaldist)
     return dr
 end
 
